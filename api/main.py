@@ -88,7 +88,8 @@ async def embed(texts: List[str]) -> JSONResponse:
 
     # Word-segment the input texts
     text_responses = await preprocessing(texts)
-    text_obj = np.array(text_responses['content'], dtype="object")
+    print(text_responses)
+    text_obj = np.array(text_responses, dtype="object")
 
     # Generate the request
     inputs, outputs = requestGenerator(
@@ -136,10 +137,8 @@ async def embed(texts: List[str]) -> JSONResponse:
 
 
 @app.post("/word-segment/")
-async def preprocessing(texts: List[str]) -> JSONResponse:
-    return JSONResponse([
-        word_tokenize(sentence, format="text") for sentence in texts
-    ])
+async def preprocessing(texts: List[str]) -> List[str]:
+    return [word_tokenize(sentence, format="text") for sentence in texts]
 
 
 ###################
