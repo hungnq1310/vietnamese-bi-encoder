@@ -5,6 +5,8 @@ import time
 from functools import partial
 
 import fastapi
+import py_vncorenlp
+
 import tritonclient.grpc as grpcclient
 import tritonclient.http as httpclient
 from tritonclient.utils import InferenceServerException
@@ -67,6 +69,11 @@ if not supports_batching and batch_size != 1:
     print("ERROR: This model doesn't support batching.")
     sys.exit(1)
 
+# Load the word and sentence segmentation component
+if not os.path.exists("/vncorenlp"):
+    py_vncorenlp.download_model(save_dir='/vncorenlp')
+rdrsegmenter = py_vncorenlp.VnCoreNLP(annotators=["wseg"], save_dir='/vncorenlp')
+
 
 ############
 # FastAPI
@@ -81,6 +88,9 @@ def root():
 
 @app.post("/embed/")
 async def embed(texts: List[str]) -> List[Any]:
+
+    # Word-segment the input texts
+    texts = await preprocessing(texts)
 
     # Generate the request
     inputs, outputs = requestGenerator(
@@ -122,6 +132,12 @@ async def embed(texts: List[str]) -> List[Any]:
     end_time = time.time()
     print("Process time: ", end_time - start_time)
     return embeddings
+
+
+@app.post("/word-segment/")
+async def preprocessing(texts: List[str]) -> List[Any]:
+    # ensure not have more than 2 sentences in a text
+    return [rdrsegmenter.tokenize(text)[0] for text in texts]
 
 
 ###################
