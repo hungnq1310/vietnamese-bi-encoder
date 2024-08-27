@@ -84,11 +84,11 @@ def root():
     return {"Hello": "World"}
 
 @app.post("/embed/")
-async def embed(texts: List[str]) -> List[Any]:
+async def embed(texts: List[str]) -> JSONResponse:
 
     # Word-segment the input texts
     text_responses = await preprocessing(texts)
-    text_obj = np.array(text_responses, dtype="object")
+    text_obj = np.array(text_responses['content'], dtype="object")
 
     # Generate the request
     inputs, outputs = requestGenerator(
@@ -130,14 +130,16 @@ async def embed(texts: List[str]) -> List[Any]:
     end_time = time.time()
     print("Process time: ", end_time - start_time)
 
-    return embeddings.as_numpy(output_name).tolist()
+    return JSONResponse(
+        embeddings.as_numpy(output_name).tolist()
+    )
 
 
 @app.post("/word-segment/")
 async def preprocessing(texts: List[str]) -> JSONResponse:
-    return [
+    return JSONResponse([
         word_tokenize(sentence, format="text") for sentence in texts
-    ]
+    ])
 
 
 ###################
