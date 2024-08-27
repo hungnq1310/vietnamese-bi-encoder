@@ -1,0 +1,17 @@
+name: "viencoder"
+backend: "python"
+max_batch_size: 64
+
+input [
+  {
+    name: "sentences"
+    data_type: TYPE_STRING
+  }
+]
+output [
+  {
+    name: "last_hidden_state"
+    data_type: TYPE_FP32
+    dims: [-1, -1]
+  }
+]
