@@ -3,15 +3,17 @@ import os
 from typing import List, Any
 import time
 from functools import partial
+import numpy as np
 
 import fastapi
-import py_vncorenlp
+from fastapi.responses import JSONResponse
+from underthesea import word_tokenize
 
 import tritonclient.grpc as grpcclient
 import tritonclient.http as httpclient
 from tritonclient.utils import InferenceServerException
 
-from utils import client
+from ..utils import client
 
 # Parse environment variables
 #
@@ -60,7 +62,7 @@ else:
     )
 
 # parsing information of model
-max_batch_size, input_name, output_names, format, dtype = client.parse_model(
+max_batch_size, input_name, output_name, format, dtype = client.parse_model(
     model_metadata, model_config
 )
 
@@ -68,11 +70,6 @@ supports_batching = max_batch_size > 0
 if not supports_batching and batch_size != 1:
     print("ERROR: This model doesn't support batching.")
     sys.exit(1)
-
-# Load the word and sentence segmentation component
-if not os.path.exists("/vncorenlp"):
-    py_vncorenlp.download_model(save_dir='/vncorenlp')
-rdrsegmenter = py_vncorenlp.VnCoreNLP(annotators=["wseg"], save_dir='/vncorenlp')
 
 
 ############
@@ -90,11 +87,12 @@ def root():
 async def embed(texts: List[str]) -> List[Any]:
 
     # Word-segment the input texts
-    texts = await preprocessing(texts)
+    text_responses = await preprocessing(texts)
+    text_obj = np.array(text_responses, dtype="object")
 
     # Generate the request
     inputs, outputs = requestGenerator(
-        texts, input_name, output_names, dtype
+        text_obj, input_name, output_name, dtype
     )
     # Perform inference
     try:
@@ -131,20 +129,22 @@ async def embed(texts: List[str]) -> List[Any]:
     # Process the results    
     end_time = time.time()
     print("Process time: ", end_time - start_time)
-    return embeddings
+
+    return embeddings.as_numpy(output_name).tolist()
 
 
 @app.post("/word-segment/")
-async def preprocessing(texts: List[str]) -> List[Any]:
-    # ensure not have more than 2 sentences in a text
-    return [rdrsegmenter.tokenize(text)[0] for text in texts]
+async def preprocessing(texts: List[str]) -> JSONResponse:
+    return [
+        word_tokenize(sentence, format="text") for sentence in texts
+    ]
 
 
 ###################
 # Helper functions
 ###################
 
-def requestGenerator(batched_image_data, input_name, output_names, dtype):
+def requestGenerator(text_obj, input_name, output_name, dtype):
     # define protocol
     if protocol.lower() == "grpc":
         client = grpcclient
@@ -152,7 +152,7 @@ def requestGenerator(batched_image_data, input_name, output_names, dtype):
         client = httpclient
 
     # Set the input and output data
-    inputs = [client.InferInput(input_name, batched_image_data.shape, dtype)]
-    inputs[0].set_data_from_numpy(batched_image_data)
-    outputs = [client.InferRequestedOutput(output_names[0])]
+    inputs = [client.InferInput(input_name, text_obj.shape, dtype)]
+    inputs[0].set_data_from_numpy(text_obj)
+    outputs = [client.InferRequestedOutput(output_name)]
     return inputs, outputs
