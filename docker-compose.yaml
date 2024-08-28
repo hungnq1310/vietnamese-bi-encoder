@@ -1,9 +1,9 @@
 services:
   viencoder:
-    # image: heronq02/viencoder:cuda11.8-dev
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: heronq02/viencoder:cuda11.8-final
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
     environment:
       - MODEL_NAME=ensemble_model
       - MODEL_VERSION=1
