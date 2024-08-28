@@ -28,8 +28,17 @@ FastAPI will deploy two main API:
 1. preprocessing (`/word-segment`) for normalize texts - using `underthesea`
 2. embedding (`/embed`) for creating meaning vector of texts
 
+## Benchmark
 
-
+```
+$ perf_analyzer -m ensemble_model --shape TEXT:8 --concurrency-range 1:4 --collect-metrics
+> Inferences/Second vs. Client Average Batch Latency
+Concurrency: 1, throughput: 52.436 infer/sec, latency 19055 usec
+Concurrency: 2, throughput: 56.491 infer/sec, latency 35376 usec
+Concurrency: 3, throughput: 53.4915 infer/sec, latency 56020 usec
+Concurrency: 4, throughput: 55.5469 infer/sec, latency 71970 usec
+```
+Currently can support ~ 55 inferences / sec with per inference is batch size 8 of strings. GPU memory usage is 4.242 GB
 
 
 
