@@ -13,7 +13,7 @@ import tritonclient.grpc as grpcclient
 import tritonclient.http as httpclient
 from tritonclient.utils import InferenceServerException
 
-from ..utils import client
+from utils import client
 
 # Parse environment variables
 #
@@ -122,7 +122,7 @@ async def embed(texts: List[str]) -> JSONResponse:
     if protocol.lower() == "grpc":
         (embeddings, error) = user_data._completed_requests.get()
         if error is not None:
-            return {"Error": "Inference failed with error: " + str(e)}
+            return {"Error": "Inference failed with error: " + str(error)}
     else:
         # HTTP
         embeddings = async_request.get_result()
