@@ -5,7 +5,7 @@ services:
       context: .
       dockerfile: Dockerfile
     environment:
-      - MODEL_NAME=viencoder
+      - MODEL_NAME=ensemble_model
       - MODEL_VERSION=1
       - TRITON_URL=0.0.0.0:8001
       - PROTOCOL=grpc
@@ -37,7 +37,7 @@ services:
       - "8002:8002"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/v2/health/ready"]
-      interval: 30s
+      interval: 60s
       timeout: 5s
       retries: 2
     command: tritonserver --model-repository=/models 
