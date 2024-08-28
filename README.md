@@ -12,6 +12,8 @@ optimum-cli export onnx --model "bkai-foundation-models/vietnamese-bi-encoder" m
 ## Usage
 ### With Docker Compose
 ```
+docker pull heronq02/viencoder:cuda11.8-final
+docker pull nvcr.io/nvidia/tritonserver:24.07-py3
 docker-compose up
 ```
 This command will start two images: 
