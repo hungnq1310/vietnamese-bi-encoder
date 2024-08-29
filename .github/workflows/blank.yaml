@@ -14,6 +14,13 @@ on:
 jobs:
   docker:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - image: heronq02/viencoder:cuda11.8-final
+            dockerfile: Dockerfile
+          - image: heronq02/tritonserver:r24.07
+            dockerfile: Dockerfile.triton
     steps:
       - name: Remove unnecessary files
         run: |
@@ -31,11 +38,19 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
+      - 
+        name: Extract metadata (tags, labels) for Docker
+          id: meta
+          uses: docker/metadata-action@v4
+          with:
+            images: ${{ matrix.image }}
       -
         name: Build and push
         uses: docker/build-push-action@v5
-        with:
-          push: true
+       	with:
+          context: .
           platforms: linux/amd64
-          tags: heronq02/viencoder:cuda11.8-dev
-
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }
