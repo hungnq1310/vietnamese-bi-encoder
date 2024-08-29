@@ -16,11 +16,11 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-      include:
-        - image: heronq02/viencoder:cuda11.8-final
-          dockerfile: Dockerfile
-        - image: heronq02/tritonserver:r24.07
-          dockerfile: tritonserver/Dockerfile
+        include:
+          - image: heronq02/viencoder:cuda11.8-final
+            dockerfile: Dockerfile
+          - image: heronq02/tritonserver:r24.07
+            dockerfile: tritonserver/Dockerfile
     steps:
       -
         name: Checkout
