@@ -16,38 +16,32 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        include:
-          - image: heronq02/viencoder:cuda11.8-final
+      include:
+        - image: heronq02/viencoder:cuda11.8-final
             dockerfile: Dockerfile
-          - image: heronq02/tritonserver:r24.07
-            dockerfile: Dockerfile.triton
+        - image: heronq02/tritonserver:r24.07
+          dockerfile: Dockerfile.triton
     steps:
-      - name: Remove unnecessary files
-        run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
       -
-        name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-      -
-        name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        name: Checkout
+        uses: actions/checkout@v3
       -
         name: Login to Docker Hub
-        uses: docker/login-action@v3
+        uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
       - 
         name: Extract metadata (tags, labels) for Docker
         id: meta
-        uses: docker/build-push-action@v5
+        uses: docker/metadata-action@v4
         with:
           images: ${{ matrix.image }}
       -
         name: Build and push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v4
        	with:
+          context: .
           file: ${{ matrix.dockerfile }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
