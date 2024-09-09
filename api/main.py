@@ -87,8 +87,8 @@ app = FastAPI()
 def root():
     return {"Hello": "World"}
 
-@app.post("/embed/")
-async def embed(textRequest: ListStr) -> JSONResponse:
+@app.post("/viencoder/")
+async def viencoder(textRequest: ListStr) -> JSONResponse:
 
     # Word-segment the input texts
     texts = textRequest.texts
