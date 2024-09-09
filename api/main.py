@@ -87,7 +87,7 @@ app = FastAPI()
 def root():
     return {"Hello": "World"}
 
-@app.post("/viencoder/")
+@app.post("/viencoder")
 async def viencoder(textRequest: ListStr) -> JSONResponse:
 
     # Word-segment the input texts
@@ -141,7 +141,7 @@ async def viencoder(textRequest: ListStr) -> JSONResponse:
     )
 
 
-@app.post("/word-segment/")
+@app.post("/word-segment")
 async def preprocessing(texts: List[str]) -> List[str]:
     return [word_tokenize(sentence, format="text") for sentence in texts]
 
