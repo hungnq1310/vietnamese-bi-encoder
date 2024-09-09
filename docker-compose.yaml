@@ -16,7 +16,9 @@ services:
     command: fastapi run api/main.py --port 7999 --root-path /textemb
     
   triton:
-    image: heronq02/tritonserver:r24.07
+    build:
+      context: .
+      dockerfile: Dockerfile.triton
     shm_size: '4gb'
     volumes:
       - ${PWD}/models:/models
@@ -26,7 +28,7 @@ services:
       - "8002:8002"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/v2/health/ready"]
-      interval: 60s
+      interval: 30s
       timeout: 5s
       retries: 2
     command: tritonserver --model-repository=/models 
