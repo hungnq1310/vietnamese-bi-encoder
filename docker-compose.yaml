@@ -1,21 +1,19 @@
 services:
   viencoder:
     image: heronq02/viencoder:cuda11.8-final
-    # build:
-    #   context: .
-    #   dockerfile: Dockerfile
     environment:
       - MODEL_NAME=ensemble_model
       - MODEL_VERSION=1
-      - TRITON_URL=0.0.0.0:8001
+      - TRITON_URL=triton:8001
       - PROTOCOL=grpc
-    network_mode: host
     ports:
       - "7999:7999"
     depends_on:
       triton:
         condition: service_healthy
-    command: fastapi run api/main.py --port 7999
+    links:
+      - triton:triton
+    command: fastapi run api/main.py --port 7999 --root-path /textemb
     
   triton:
     build:
@@ -24,20 +22,13 @@ services:
     shm_size: '4gb'
     volumes:
       - ${PWD}/models:/models
-    deploy:
-      resources:
-        reservations:
-          devices:
-          - driver: nvidia
-            device_ids: ['1']
-            capabilities: [gpu]
     ports:
       - "8000:8000"
       - "8001:8001"
       - "8002:8002"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/v2/health/ready"]
-      interval: 60s
+      interval: 30s
       timeout: 5s
       retries: 2
     command: tritonserver --model-repository=/models 

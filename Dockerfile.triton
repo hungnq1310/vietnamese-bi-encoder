@@ -1,4 +1,4 @@
 FROM nvcr.io/nvidia/tritonserver:24.07-py3 as builder
 
 RUN python3 -m pip install --upgrade pip
-RUN pip install --user --no-cache-dir sentence-transformers
+RUN pip install transformers

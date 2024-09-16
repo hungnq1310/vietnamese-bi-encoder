@@ -5,7 +5,8 @@ import time
 from functools import partial
 import numpy as np
 
-import fastapi
+from pydantic import BaseModel
+from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from underthesea import word_tokenize
 
@@ -72,21 +73,25 @@ if not supports_batching and batch_size != 1:
     sys.exit(1)
 
 
+class ListStr(BaseModel):
+    texts: List[str]
+
 ############
 # FastAPI
 ############
 
 
-app = fastapi.FastAPI()
+app = FastAPI()
 
 @app.get("/")
 def root():
     return {"Hello": "World"}
 
-@app.post("/embed/")
-async def embed(texts: List[str]) -> JSONResponse:
+@app.post("/viencoder")
+async def viencoder(textRequest: ListStr) -> JSONResponse:
 
     # Word-segment the input texts
+    texts = textRequest.texts
     text_responses = await preprocessing(texts)
     print(text_responses)
     text_obj = np.array(text_responses, dtype="object")
@@ -136,7 +141,7 @@ async def embed(texts: List[str]) -> JSONResponse:
     )
 
 
-@app.post("/word-segment/")
+@app.post("/word-segment")
 async def preprocessing(texts: List[str]) -> List[str]:
     return [word_tokenize(sentence, format="text") for sentence in texts]
 
