@@ -13,7 +13,7 @@ from underthesea import word_tokenize
 import tritonclient.grpc as grpcclient
 import tritonclient.http as httpclient
 from tritonclient.utils import InferenceServerException
-
+from trism import TritonModel
 from utils import client
 
 # Parse environment variables
@@ -28,51 +28,26 @@ verbose       = os.getenv("VERBOSE", "False").lower() in ("true", "1", "t")
 async_set     = os.getenv("ASYNC_SET", "False").lower() in ("true", "1", "t")
 
 
-try:
-    if protocol.lower() == "grpc":
-        # Create gRPC client for communicating with the server
-        triton_client = grpcclient.InferenceServerClient(
-            url=url, verbose=verbose
-        )
-    else:
-        # Specify large enough concurrency to handle the number of requests.
-        concurrency = 20 if async_set else 1
-        triton_client = httpclient.InferenceServerClient(
-            url=url, verbose=verbose, concurrency=concurrency
-        )
-except Exception as e:
-    print("client creation failed: " + str(e))
-    sys.exit(1)
+grpc = protocol.lower() == "grpc"
 
-try:
-    model_metadata = triton_client.get_model_metadata(
-        model_name=model_name, model_version=model_version
-    )
-    model_config = triton_client.get_model_config(
-        model_name=model_name, model_version=model_version
-    )
-except InferenceServerException as e:
-    print("failed to retrieve model metadata: " + str(e))
-    sys.exit(1)
 
-if protocol.lower() == "grpc":
-    model_config = model_config.config
-else:
-    model_metadata, model_config = client.convert_http_metadata_config(
-        model_metadata, model_config
-    )
-
-# parsing information of model
-max_batch_size, input_name, output_name, format, dtype = client.parse_model(
-    model_metadata, model_config
+# ----------------------------------------------------------
+# Create triton model.
+model = TritonModel(
+  model=model_name,                 # Model name.
+  version=model_version,            # Model version.
+  url=url,                          # Triton Server URL.
+  grpc=grpc                         # Use gRPC or Http.
 )
 
-supports_batching = max_batch_size > 0
-if not supports_batching and batch_size != 1:
-    print("ERROR: This model doesn't support batching.")
-    sys.exit(1)
+# View metadata.
+for inp in model.inputs:
+  print(f"name: {inp.name}, shape: {inp.shape}, datatype: {inp.dtype}\n")
+for out in model.outputs:
+  print(f"name: {out.name}, shape: {out.shape}, datatype: {out.dtype}\n")
 
 
+# ----------------------------------------------------------
 class ListStr(BaseModel):
     texts: List[str]
 
@@ -96,50 +71,17 @@ async def viencoder(textRequest: ListStr) -> JSONResponse:
     print(text_responses)
     text_obj = np.array(text_responses, dtype="object")
 
-    # Generate the request
-    inputs, outputs = requestGenerator(
-        text_obj, input_name, output_name, dtype
-    )
-    # Perform inference
+    # -------------------INFERENCE--------------------
     try:
         start_time = time.time()
+        outputs = model.run(data = [text_obj])
+        end_time = time.time()
+        print("Process time: ", end_time - start_time)
+        return JSONResponse(outputs.tolist())
+    except Exception as e:
+        return JSONResponse(content={"Error": "Inference failed with error: " + str(e)})
 
-        if protocol.lower() == "grpc":
-            user_data = client.UserData()
-            embeddings = triton_client.async_infer(
-                model_name,
-                inputs,
-                partial(client.completion_callback, user_data),
-                model_version=model_version,
-                outputs=outputs,
-            )
-        else:
-            async_request = triton_client.async_infer(
-                model_name,
-                inputs,
-                model_version=model_version,
-                outputs=outputs,
-            )
-    except InferenceServerException as e:
-        return {"Error": "Inference failed with error: " + str(e)}
-
-    # Collect results from the ongoing async requests
-    if protocol.lower() == "grpc":
-        (embeddings, error) = user_data._completed_requests.get()
-        if error is not None:
-            return {"Error": "Inference failed with error: " + str(error)}
-    else:
-        # HTTP
-        embeddings = async_request.get_result()
-
-    # Process the results    
-    end_time = time.time()
-    print("Process time: ", end_time - start_time)
-
-    return JSONResponse(
-        embeddings.as_numpy(output_name).tolist()
-    )
-
+    # ----------------------------------------------------------------
 
 @app.post("/word-segment")
 async def preprocessing(texts: List[str]) -> List[str]:
